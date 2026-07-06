@@ -2,7 +2,7 @@
 :: author: Redcube
 setlocal enabledelayedexpansion
 
-set "PFC_EXE=%~dp0pfc\bin\Release\net8.0\pfc.exe"
+set "PFC_EXE=%~dp0pfc\bin\Release\net10.0\pfc.exe"
 
 if "%~1"=="" (
     echo drop a file onto this
@@ -17,6 +17,8 @@ set "DDS_OUT=%OUTDIR%%BASENAME%.dds"
 
 cls
 echo converting: %~nx1
+echo input: %INPUT%
+echo output: %DDS_OUT%
 echo.
 
 if not exist "%PFC_EXE%" (
@@ -35,47 +37,43 @@ if "!PIXFMT!"=="" goto :manual
 echo pixel format: !PIXFMT!
 echo.
 
-if /i "!PIXFMT!"=="PF_DXT1" ( set "DXT=dxt1" & set "PFMT=bgr24" & goto :run )
-if /i "!PIXFMT!"=="PF_DXT3" ( set "DXT=dxt3" & set "PFMT=bgra"  & goto :run )
-if /i "!PIXFMT!"=="PF_DXT5" ( set "DXT=dxt5" & set "PFMT=bgra"  & goto :run )
+if /i "!PIXFMT!"=="PF_DXT1" ( set "DXT=DXT1" & set "PFMT=bgr24" & goto :run )
+if /i "!PIXFMT!"=="PF_DXT3" ( set "DXT=DXT3" & set "PFMT=bgra"  & goto :run )
+if /i "!PIXFMT!"=="PF_DXT5" ( set "DXT=DXT5" & set "PFMT=bgra"  & goto :run )
 
-echo !PIXFMT! is not a dxt format, pick one manually
+echo Error !PIXFMT! not a valid input. Pls select manually
 
 :manual
 echo.
-echo 1 = dxt1
-echo 3 = dxt3
-echo 5 = dxt5
+echo 1 = DXT1
+echo 3 = DXT3
+echo 5 = DXT5
 echo.
 
 :ask
 set "CHOICE="
 set /p "CHOICE=format: "
-if "!CHOICE!"=="1" ( set "DXT=dxt1" & set "PFMT=bgr24" & goto :run )
-if "!CHOICE!"=="3" ( set "DXT=dxt3" & set "PFMT=bgra"  & goto :run )
-if "!CHOICE!"=="5" ( set "DXT=dxt5" & set "PFMT=bgra"  & goto :run )
+if "!CHOICE!"=="1" ( set "DXT=DXT1" & set "PFMT=bgr24" & goto :run )
+if "!CHOICE!"=="3" ( set "DXT=DXT3" & set "PFMT=bgra"  & goto :run )
+if "!CHOICE!"=="5" ( set "DXT=DXT5" & set "PFMT=bgra"  & goto :run )
 echo invalid
 goto :ask
 
 :run
-echo running ffmpeg with %DXT%...
+echo running ImageMagick with %DXT%...
 echo.
 
-ffmpeg -y -i "%INPUT%" ^
-    -vf "format=%PFMT%" ^
-    -c:v dds ^
-    -compression %DXT% ^
-    -mipmaps 1 ^
-    -big_endian 1 ^
-    "%DDS_OUT%"
+magick "%INPUT%" -define dds:compression=%DXT% "%DDS_OUT%"
 
 if errorlevel 1 (
-    echo something went wrong
+    echo conversion failed
     pause
     exit /b 1
 )
 
 echo.
 echo done -- %DDS_OUT%
+echo file size: 
+for %%A in ("%DDS_OUT%") do echo %%~zA bytes
 echo.
 pause

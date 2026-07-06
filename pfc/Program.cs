@@ -1,12 +1,12 @@
-﻿// author: Redcube
-
+﻿// Author: Redcube
+using System;
+using System.IO;
+using System.Linq;
+using CUE4Parse.Encryption.Aes;
 using CUE4Parse.FileProvider;
-using CUE4Parse.UE4.Assets.Exports.Texture;
 using CUE4Parse.UE4.Objects.Core.Misc;
 using CUE4Parse.UE4.Versions;
-//using System;
-//using System.IO;
-//using System.Xml.Linq;
+using CUE4Parse.UE4.Assets.Objects.Properties;
 
 if (args.Length == 0)
 {
@@ -17,18 +17,21 @@ if (args.Length == 0)
 var paksPath = @"D:\SteamLibrary\steamapps\common\Sea of Thieves\Athena\Content\Paks";
 var aesKey = "0x37A0BC3DC2E01D9EB4923CA266A5701F56A4802347F07927FC3FC25C93B31B50";
 var name = Path.GetFileNameWithoutExtension(args[0]);
+//var name = "wpn_blunderbuss_smp_01_a_di"; // test variable
 
 try
 {
+#pragma warning disable CS0618
     var provider = new DefaultFileProvider(
         paksPath,
         SearchOption.TopDirectoryOnly,
-        isCaseInsensitive: true,
+        true,
         new VersionContainer(EGame.GAME_SeaOfThieves)
     );
+#pragma warning restore CS0618
 
     provider.Initialize();
-    await provider.SubmitKeyAsync(new FAesKey(aesKey));
+    provider.SubmitKey(new FGuid(), new FAesKey(aesKey));
 
     var hit = provider.Files.Keys.FirstOrDefault(k =>
         string.Equals(Path.GetFileNameWithoutExtension(k), name, StringComparison.OrdinalIgnoreCase) &&
@@ -40,19 +43,38 @@ try
         return 1;
     }
 
-    var packagePath = hit[..^7]; // strip .uasset
-    var exports = await provider.LoadObjectExportsAsync(packagePath);
+    // Parse the asset package using LoadPackageObject
+    var packagePath = hit.Substring(0, hit.Length - 7); // Remove .uasset
+    var obj = provider.LoadPackageObject(packagePath);
 
-    foreach (var export in exports)
+    if (obj != null)
     {
-        if (export is UTexture2D tex)
+        // Try to get Format property (for textures)
+        var formatProp = obj.GetType().GetProperty("Format");
+        if (formatProp != null)
         {
-            Console.WriteLine(tex.PixelFormat);
-            return 0;
+            var value = formatProp.GetValue(obj)?.ToString();
+            if (!string.IsNullOrEmpty(value))
+            {
+                Console.WriteLine(value);
+                return 0;
+            }
+        }
+
+        // Try PixelFormat as fallback
+        var pixelFormatProp = obj.GetType().GetProperty("PixelFormat");
+        if (pixelFormatProp != null)
+        {
+            var value = pixelFormatProp.GetValue(obj)?.ToString();
+            if (!string.IsNullOrEmpty(value))
+            {
+                Console.WriteLine(value);
+                return 0;
+            }
         }
     }
 
-    Console.Error.WriteLine("no Texture2D export found");
+    Console.Error.WriteLine("Format/PixelFormat not found");
     return 1;
 }
 catch (Exception ex)
@@ -60,4 +82,3 @@ catch (Exception ex)
     Console.Error.WriteLine($"error: {ex.Message}");
     return 1;
 }
-    
