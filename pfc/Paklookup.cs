@@ -7,7 +7,7 @@ using CUE4Parse.UE4.Versions;
 
 static class PakLookup
 {
-    const string ConfigFile = "pfc/Path.cfg";
+    const string ConfigFile = "net10.0/Path.cfg";
     const string AesKey = "0x37A0BC3DC2E01D9EB4923CA266A5701F56A4802347F07927FC3FC25C93B31B50";
 
     static string GetPaksPath()

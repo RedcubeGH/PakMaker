@@ -2,13 +2,13 @@
 :: author: Redcube
 setlocal enabledelayedexpansion
 
-set "PFC_EXE=%~dp0pfc\bin\Release\net10.0\pfc.exe"
-set "U4PAK_EXE=%~dp0pfc\u4pak.exe"
+set "PFC_EXE=%~dp0net10.0\pfc.exe"
+set "U4PAK_EXE=%~dp0net10.0\u4pak.exe"
 set "STAGING=%~dp0mod_staging"
 set "PAKDIR=%~dp0pak"
 set "PAKNAME=%~n1"
 set "PAKROOT="
-set "CFG=%~dp0pfc\Path.cfg"
+set "CFG=%~dp0net10.0\Path.cfg"
 
 if "%~1"=="" (
     echo drop your image files onto this
