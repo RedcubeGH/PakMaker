@@ -4,6 +4,7 @@ setlocal enabledelayedexpansion
 
 set "PFC_EXE=%~dp0net10.0\pfc.exe"
 set "U4PAK_EXE=%~dp0net10.0\u4pak.exe"
+set "MAGICK_EXE=%~dp0net10.0\magick\magick.exe"
 set "STAGING=%~dp0mod_staging"
 set "PAKDIR=%~dp0pak"
 set "PAKNAME=%~n1"
@@ -24,6 +25,13 @@ if not exist "%PFC_EXE%" (
 
 if not exist "%U4PAK_EXE%" (
     echo u4pak.exe not found at %U4PAK_EXE%
+    pause
+    exit /b 1
+)
+
+if not exist "%MAGICK_EXE%" (
+    echo magick.exe not found at %MAGICK_EXE%
+    echo download the portable ImageMagick build from imagemagick.org and extract it into net10.0\magick\
     pause
     exit /b 1
 )
@@ -167,7 +175,7 @@ goto :ask
 echo running ImageMagick with %DXT%...
 echo.
 
-magick "%INPUT%" -define dds:compression=%DXT% "%DDS_OUT%"
+"%MAGICK_EXE%" "%INPUT%" -define dds:compression=%DXT% "%DDS_OUT%"
 
 if errorlevel 1 (
     echo conversion failed
