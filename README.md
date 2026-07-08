@@ -3,15 +3,17 @@
 A texture-replacement modding tool for Sea of Thieves. Drop an image onto it and it will:
 
 - look up the pixel format the existing in-game texture uses
-- convert your image to matching DDS compression with ImageMagick
+- convert your image to matching DDS compression with Compressonator CLI
 - hex-inject the DDS data into the original `.uasset`
 - stage everything and build a `.pak` with u4pak, ready to drop into the game
+
+It also comes with an unpack tool (`Ω_UNPACK.bat`) for pulling files back out of a `.pak`.
 
 ## Getting started
 
 ### Option 1: Download the latest release (recommended)
 
-Grab the newest zip from the [Releases](https://github.com/RedcubeGH/PakMaker/releases) page. It ships with everything already included — `u4pak.exe`, `oo2core_9_win64.dll`, and a bundled portable copy of ImageMagick — so there's nothing extra to install.
+Grab the newest zip from the [Releases](https://github.com/RedcubeGH/PakMaker/releases) page. It ships with everything already included — `u4pak.exe`, `oo2core_9_win64.dll`, and Compressonator CLI — so there's nothing extra to install.
 
 1. Extract the zip anywhere
 2. Drag your image file(s) onto `Ω_DRAG_HERE_TO_MAKE_PAK.bat`
@@ -41,13 +43,17 @@ PakMaker shells out to a couple of external tools that aren't part of the C# bui
 
 | File | Where to get it |
 |---|---|
-| `u4pak.exe` | [panzi/rust-u4pak releases](https://github.com/panzi/rust-u4pak/releases) — the Rust rewrite with a standalone Windows binary, handles the actual `pack`/`list`/`info` work |
+| `u4pak.exe` | [FranklyGD/Spyro-Reignited-Trilogy-Asset-Replacement releases](https://github.com/FranklyGD/Spyro-Reignited-Trilogy-Asset-Replacement/releases/tag/fp1.0) — a standalone Windows build of panzi's `u4pak.py`, handles the actual `pack`/`list`/`info` work |
 | `oo2core_9_win64.dll` | Copy this from your own Sea of Thieves install: `Sea of Thieves\Athena\Binaries\Win64\oo2core_9_win64.dll`. It's RAD Game Tools' proprietary Oodle codec, so it can't be redistributed on its own — pull it from a copy of the game you own |
-| ImageMagick (portable) | Download the **portable** Windows build from [imagemagick.org/script/download.php#windows](https://imagemagick.org/script/download.php#windows) (a file named something like `ImageMagick-7.x.x-portable-Q16-x64.zip`). Extract its **entire contents** into a `magick\` subfolder next to `pfc.exe` — the DLLs and config files that ship alongside `magick.exe` are needed too, not just the exe |
+| Compressonator CLI | Download from [gpuopen.com/compressonator](https://gpuopen.com/compressonator/) (or grab `CompressonatorCLI_x64_4.5.52.exe` directly from the [V4.5.52 release](https://github.com/GPUOpen-Tools/compressonator/releases/tag/V4.5.52)), install it, then copy `compressonatorcli.exe` and its accompanying DLLs into a `compressonatorcli\` subfolder next to `pfc.exe` |
 
 **3. Run it**
 
 Drag your image file(s) onto `Ω_DRAG_HERE_TO_MAKE_PAK.bat` (in `pfc\bin\Release\`) the same way as in Option 1.
+
+## Unpacking
+
+To pull files back out of a `.pak` (e.g. to inspect the original folder structure), drag the `.pak` onto `Ω_UNPACK.bat`. It extracts into `unpak\<pakname>\`.
 
 ## Folder layout
 
@@ -60,11 +66,12 @@ PakMaker/
 │  ├─ u4pak.exe
 │  ├─ oo2core_9_win64.dll
 │  ├─ Path.cfg
-│  └─ magick/
-│     └─ magick.exe (+ its DLLs/config)
+│  └─ compressonatorcli/
+│     └─ compressonatorcli.exe (+ its DLLs)
 ├─ pak/          <- built .pak files land here
-├─ unpak/
-└─ Ω_DRAG_HERE_TO_MAKE_PAK.bat
+├─ unpak/        <- unpacked .pak contents land here
+├─ Ω_DRAG_HERE_TO_MAKE_PAK.bat
+└─ Ω_UNPACK.bat
 ```
 
 ## License
