@@ -4,7 +4,7 @@ setlocal enabledelayedexpansion
 
 set "PFC_EXE=%~dp0net10.0\pfc.exe"
 set "U4PAK_EXE=%~dp0net10.0\u4pak.exe"
-set "MAGICK_EXE=%~dp0net10.0\magick\magick.exe"
+set "COMPRESSONATOR_EXE=%~dp0net10.0\compressonatorcli\compressonatorcli.exe"
 set "STAGING=%~dp0mod_staging"
 set "PAKDIR=%~dp0pak"
 set "PAKNAME=%~n1"
@@ -29,9 +29,9 @@ if not exist "%U4PAK_EXE%" (
     exit /b 1
 )
 
-if not exist "%MAGICK_EXE%" (
-    echo magick.exe not found at %MAGICK_EXE%
-    echo download the portable ImageMagick build from imagemagick.org and extract it into net10.0\magick\
+if not exist "%COMPRESSONATOR_EXE%" (
+    echo ERROR: compressonatorcli.exe not found at %COMPRESSONATOR_EXE%
+    echo download Compressonator from https://gpuopen.com/compressonator/ and extract it into net10.0\compressonatorcli\
     pause
     exit /b 1
 )
@@ -134,6 +134,8 @@ set "BASENAME=%~n1"
 set "OUTDIR=%~dp1"
 set "DDS_OUT=%OUTDIR%%BASENAME%.dds"
 set "UASSET=%OUTDIR%%BASENAME%.uasset"
+set "BCFMT="
+set "ALPHAFLAG="
 
 echo ============================================
 echo converting: %~nx1
@@ -149,36 +151,54 @@ if "!PIXFMT!"=="" goto :manual
 echo pixel format: !PIXFMT!
 echo.
 
-if /i "!PIXFMT!"=="PF_DXT1" ( set "DXT=DXT1" & set "PFMT=bgr24" & goto :run )
-if /i "!PIXFMT!"=="PF_DXT3" ( set "DXT=DXT3" & set "PFMT=bgra"  & goto :run )
-if /i "!PIXFMT!"=="PF_BC5" ( set "DXT=DXT5" & set "PFMT=bgra"  & goto :run )
+if /i "!PIXFMT!"=="PF_DXT1" ( set "BCFMT=BC1" & set "ALPHAFLAG=-DXT1UseAlpha 1" & goto :run )
+if /i "!PIXFMT!"=="PF_BC2" ( set "BCFMT=BC2" & goto :run )
+if /i "!PIXFMT!"=="PF_DXT3" ( set "BCFMT=BC3" & goto :run )
+if /i "!PIXFMT!"=="PF_BC4" ( set "BCFMT=BC4" & goto :run )
+if /i "!PIXFMT!"=="PF_BC5" ( set "BCFMT=BC5" & goto :run )
+if /i "!PIXFMT!"=="PF_BC6H" ( set "BCFMT=BC6H" & goto :run )
+if /i "!PIXFMT!"=="PF_BC7" ( set "BCFMT=BC7" & goto :run )
 
 echo Error !PIXFMT! not a valid input. pls select manually
 
 :manual
 echo.
-echo 1 = DXT1
-echo 3 = DXT3
-echo 5 = DXT5
+echo 1 = BC1
+echo 2 = BC2
+echo 3 = BC3
+echo 4 = BC4
+echo 5 = BC5
+echo 6 = BC6H
+echo 7 = BC7
 echo.
 
 :ask
 set "CHOICE="
 set /p "CHOICE=format: "
-if "!CHOICE!"=="1" ( set "DXT=DXT1" & set "PFMT=bgr24" & goto :run )
-if "!CHOICE!"=="3" ( set "DXT=DXT3" & set "PFMT=bgra"  & goto :run )
-if "!CHOICE!"=="5" ( set "DXT=DXT5" & set "PFMT=bgra"  & goto :run )
+if "!CHOICE!"=="1" ( set "BCFMT=BC1" & set "ALPHAFLAG=-DXT1UseAlpha 1" & goto :run )
+if "!CHOICE!"=="2" ( set "BCFMT=BC2" & goto :run )
+if "!CHOICE!"=="3" ( set "BCFMT=BC3" & goto :run )
+if "!CHOICE!"=="4" ( set "BCFMT=BC4" & goto :run )
+if "!CHOICE!"=="5" ( set "BCFMT=BC5" & goto :run )
+if "!CHOICE!"=="6" ( set "BCFMT=BC6H" & goto :run )
+if "!CHOICE!"=="7" ( set "BCFMT=BC7" & goto :run )
 echo invalid
 goto :ask
 
 :run
-echo running ImageMagick with %DXT%...
+echo using compression format: !BCFMT!
+echo running compressonatorcli with !BCFMT!...
 echo.
 
-"%MAGICK_EXE%" "%INPUT%" -define dds:compression=%DXT% "%DDS_OUT%"
+"%COMPRESSONATOR_EXE%" -fd !BCFMT! -miplevels 20 !ALPHAFLAG! "%INPUT%" "%DDS_OUT%"
 
 if errorlevel 1 (
-    echo conversion failed
+    echo ERROR: compressonatorcli conversion failed for %BASENAME%
+    goto :eof
+)
+
+if not exist "%DDS_OUT%" (
+    echo ERROR: expected output file was not created -- %DDS_OUT%
     goto :eof
 )
 
@@ -192,7 +212,12 @@ echo.
 "%PFC_EXE%" inject "%BASENAME%" "%DDS_OUT%" "%UASSET%"
 
 if errorlevel 1 (
-    echo inject failed
+    echo ERROR: pfc inject failed for %BASENAME%
+    goto :eof
+)
+
+if not exist "%UASSET%" (
+    echo ERROR: expected output file was not created -- %UASSET%
     goto :eof
 )
 
@@ -207,7 +232,7 @@ echo looking up in-game path...
 set /p ASSETPATH= < "%TEMP%\pfc_path.txt"
 
 if "!ASSETPATH!"=="" (
-    echo could not resolve in-game path, skipping staging for this file
+    echo ERROR: could not resolve in-game path, skipping staging for this file
     goto :eof
 )
 
