@@ -10,6 +10,7 @@ internal class Program
             Console.Error.WriteLine("usage: pfc <assetname>");
             Console.Error.WriteLine("       pfc inject <assetname> <ddspath> <outuasset>");
             Console.Error.WriteLine("       pfc path <assetname>");
+            Console.Error.WriteLine("       pfc info <assetname>");
             return 1;
         }
 
@@ -24,6 +25,36 @@ internal class Program
             try
             {
                 Console.WriteLine(value: PakLookup.GetAssetPath(args[1]));
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"error: {ex.Message}");
+                return 1;
+            }
+        }
+
+        if (string.Equals(args[0], "info", StringComparison.OrdinalIgnoreCase))
+        {
+            if (args.Length < 2)
+            {
+                Console.Error.WriteLine("usage: pfc info <assetname>");
+                return 1;
+            }
+
+            try
+            {
+                var (format, sizeX, _) = PakLookup.GetTextureInfo(args[1]);
+                var tcFormat = TexconvFormatMap.Resolve(format, out var reason);
+
+                if (tcFormat is null)
+                {
+                    Console.WriteLine($"{format}|{sizeX}|");
+                    Console.Error.WriteLine($"error: {reason}");
+                    return 1;
+                }
+
+                Console.WriteLine($"{format}|{sizeX}|{tcFormat}");
                 return 0;
             }
             catch (Exception ex)

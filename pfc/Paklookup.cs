@@ -75,6 +75,20 @@ static class PakLookup
     }
 
     [Obsolete]
+    public static (string Format, int SizeX, int SizeY) GetTextureInfo(string assetName)
+    {
+        var provider = OpenProvider();
+        var hit = FindUassetKey(provider, assetName);
+        var packagePath = hit[..^7];
+        var texture = provider.LoadPackageObject<UTexture2D>(packagePath);
+
+        if (texture is null)
+            throw new Exception("no Texture2D found in package");
+
+        return (texture.Format.ToString(), texture.PlatformData.SizeX, texture.PlatformData.SizeY);
+    }
+
+    [Obsolete]
     public static long ExportRawAndGetOffset(string assetName, string outputUassetPath)
     {
         var provider = OpenProvider();

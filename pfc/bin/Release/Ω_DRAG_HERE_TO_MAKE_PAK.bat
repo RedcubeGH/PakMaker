@@ -4,10 +4,11 @@ setlocal enabledelayedexpansion
 
 set "PFC_EXE=%~dp0net10.0\pfc.exe"
 set "U4PAK_EXE=%~dp0net10.0\u4pak.exe"
-set "COMPRESSONATOR_EXE=%~dp0net10.0\compressonatorcli\compressonatorcli.exe"
+set "TEXCONV_EXE=%~dp0net10.0\texconv.exe"
 set "STAGING=%~dp0mod_staging"
 set "PAKDIR=%~dp0pak"
 set "PAKNAME=%~n1"
+set "SUFFIX=_p1000"
 set "PAKROOT="
 set "CFG=%~dp0net10.0\Path.cfg"
 
@@ -29,9 +30,9 @@ if not exist "%U4PAK_EXE%" (
     exit /b 1
 )
 
-if not exist "%COMPRESSONATOR_EXE%" (
-    echo ERROR: compressonatorcli.exe not found at %COMPRESSONATOR_EXE%
-    echo download Compressonator from https://gpuopen.com/compressonator/ and extract it into net10.0\compressonatorcli\
+if not exist "%TEXCONV_EXE%" (
+    echo ERROR: texconv.exe not found at %TEXCONV_EXE%
+    echo get it from Microsoft's DirectXTex releases and drop it into net10.0\
     pause
     exit /b 1
 )
@@ -91,7 +92,7 @@ timeout /t 1 >nul
 
 cls
 
-echo [^^!] Any old %PAKNAME%.pak will be overwritten.
+echo [^^!] Any old %PAKNAME%%SUFFIX%.pak will be overwritten.
 echo Close the window to abort or press any key to continue...
 pause >nul
 
@@ -117,13 +118,17 @@ rd "%STAGING%" /s /q
 
 for %%F in (%*) do del "%%~dpF%%~nF.uasset" 2>nul
 
-echo.
-"%U4PAK_EXE%" list "%PAKDIR%\%PAKNAME%.pak"
-echo.
-"%U4PAK_EXE%" info "%PAKDIR%\%PAKNAME%.pak"
+if exist "%PAKDIR%\%PAKNAME%.pak" (
+    move /y "%PAKDIR%\%PAKNAME%.pak" "%PAKDIR%\%PAKNAME%%SUFFIX%.pak" >nul
+)
 
 echo.
-echo -^> %PAKDIR%\%PAKNAME%.pak
+"%U4PAK_EXE%" list "%PAKDIR%\%PAKNAME%%SUFFIX%.pak"
+echo.
+"%U4PAK_EXE%" info "%PAKDIR%\%PAKNAME%%SUFFIX%.pak"
+
+echo.
+echo -^> %PAKDIR%\%PAKNAME%%SUFFIX%.pak
 echo.
 pause
 exit /b 0
@@ -134,66 +139,77 @@ set "BASENAME=%~n1"
 set "OUTDIR=%~dp1"
 set "DDS_OUT=%OUTDIR%%BASENAME%.dds"
 set "UASSET=%OUTDIR%%BASENAME%.uasset"
-set "BCFMT="
-set "ALPHAFLAG="
+set "PIXFMT="
+set "TEXSIZE="
+set "TCFMT="
 
 echo ============================================
 echo converting: %~nx1
 echo input: %INPUT%
 echo.
 
-echo checking pak for pixel format...
-"%PFC_EXE%" "%BASENAME%" > "%TEMP%\pfc_out.txt" 2>nul
-set /p PIXFMT= < "%TEMP%\pfc_out.txt"
+echo checking pak for pixel format / size / texconv format...
+"%PFC_EXE%" info "%BASENAME%" > "%TEMP%\pfc_info.txt" 2>"%TEMP%\pfc_info_err.txt"
+set "INFOLINE="
+set /p INFOLINE= < "%TEMP%\pfc_info.txt"
 
-if "!PIXFMT!"=="" goto :manual
+if not "!INFOLINE!"=="" (
+    for /f "tokens=1,2,3 delims=|" %%A in ("!INFOLINE!") do (
+        set "PIXFMT=%%A"
+        set "TEXSIZE=%%B"
+        set "TCFMT=%%C"
+    )
+)
 
-echo pixel format: !PIXFMT!
+if not "!TCFMT!"=="" goto :run
+
+if "!PIXFMT!"=="" (
+    echo could not look up %BASENAME% in your paks, pls select manually
+) else (
+    echo %PIXFMT% has no texconv mapping yet, pls select manually
+    type "%TEMP%\pfc_info_err.txt" 2>nul
+)
+
 echo.
-
-if /i "!PIXFMT!"=="PF_DXT1" ( set "BCFMT=BC1" & set "ALPHAFLAG=-DXT1UseAlpha 1" & goto :run )
-if /i "!PIXFMT!"=="PF_BC2" ( set "BCFMT=BC2" & goto :run )
-if /i "!PIXFMT!"=="PF_DXT3" ( set "BCFMT=BC3" & goto :run )
-if /i "!PIXFMT!"=="PF_BC4" ( set "BCFMT=BC4" & goto :run )
-if /i "!PIXFMT!"=="PF_BC5" ( set "BCFMT=BC5" & goto :run )
-if /i "!PIXFMT!"=="PF_BC6H" ( set "BCFMT=BC6H" & goto :run )
-if /i "!PIXFMT!"=="PF_BC7" ( set "BCFMT=BC7" & goto :run )
-
-echo Error !PIXFMT! not a valid input. pls select manually
-
-:manual
-echo.
-echo 1 = BC1
-echo 2 = BC2
-echo 3 = BC3
-echo 4 = BC4
-echo 5 = BC5
-echo 6 = BC6H
-echo 7 = BC7
+echo 1 = BC1_UNORM
+echo 2 = BC2_UNORM
+echo 3 = BC3_UNORM
+echo 4 = BC4_UNORM
+echo 5 = BC5_UNORM
+echo 6 = BC6H_UF16
+echo 7 = BC7_UNORM
 echo.
 
 :ask
 set "CHOICE="
 set /p "CHOICE=format: "
-if "!CHOICE!"=="1" ( set "BCFMT=BC1" & set "ALPHAFLAG=-DXT1UseAlpha 1" & goto :run )
-if "!CHOICE!"=="2" ( set "BCFMT=BC2" & goto :run )
-if "!CHOICE!"=="3" ( set "BCFMT=BC3" & goto :run )
-if "!CHOICE!"=="4" ( set "BCFMT=BC4" & goto :run )
-if "!CHOICE!"=="5" ( set "BCFMT=BC5" & goto :run )
-if "!CHOICE!"=="6" ( set "BCFMT=BC6H" & goto :run )
-if "!CHOICE!"=="7" ( set "BCFMT=BC7" & goto :run )
+if "!CHOICE!"=="1" ( set "TCFMT=BC1_UNORM" & goto :run )
+if "!CHOICE!"=="2" ( set "TCFMT=BC2_UNORM" & goto :run )
+if "!CHOICE!"=="3" ( set "TCFMT=BC3_UNORM" & goto :run )
+if "!CHOICE!"=="4" ( set "TCFMT=BC4_UNORM" & goto :run )
+if "!CHOICE!"=="5" ( set "TCFMT=BC5_UNORM" & goto :run )
+if "!CHOICE!"=="6" ( set "TCFMT=BC6H_UF16" & goto :run )
+if "!CHOICE!"=="7" ( set "TCFMT=BC7_UNORM" & goto :run )
 echo invalid
 goto :ask
 
 :run
-echo using compression format: !BCFMT!
-echo running compressonatorcli with !BCFMT!...
+echo using texconv format: !TCFMT!
+if not "!TEXSIZE!"=="" echo forcing size: !TEXSIZE!x!TEXSIZE!
+echo running texconv...
 echo.
 
-"%COMPRESSONATOR_EXE%" -fd !BCFMT! -miplevels 20 !ALPHAFLAG! "%INPUT%" "%DDS_OUT%"
+set "OUTDIR_ARG=%OUTDIR%"
+if "!OUTDIR_ARG:~-1!"=="\" set "OUTDIR_ARG=!OUTDIR_ARG:~0,-1!"
+
+if "!TEXSIZE!"=="" (
+    "%TEXCONV_EXE%" -f !TCFMT! -m 0 -y -o "!OUTDIR_ARG!" "%INPUT%"
+) else (
+    "%TEXCONV_EXE%" -f !TCFMT! -m 0 -y -w !TEXSIZE! -h !TEXSIZE! -o "!OUTDIR_ARG!" "%INPUT%"
+)
 
 if errorlevel 1 (
-    echo ERROR: compressonatorcli conversion failed for %BASENAME%
+    echo ERROR: texconv conversion failed for %BASENAME%
     goto :eof
 )
 
